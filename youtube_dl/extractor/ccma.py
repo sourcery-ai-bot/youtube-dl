@@ -77,20 +77,16 @@ class CCMAIE(InfoExtractor):
         timestamp = parse_iso8601(informacio.get('data_emissio', {}).get('utc'))
 
         subtitles = {}
-        subtitols = media.get('subtitols', {})
-        if subtitols:
-            sub_url = subtitols.get('url')
-            if sub_url:
+        if subtitols := media.get('subtitols', {}):
+            if sub_url := subtitols.get('url'):
                 subtitles.setdefault(
                     subtitols.get('iso') or subtitols.get('text') or 'ca', []).append({
                         'url': sub_url,
                     })
 
         thumbnails = []
-        imatges = media.get('imatges', {})
-        if imatges:
-            thumbnail_url = imatges.get('url')
-            if thumbnail_url:
+        if imatges := media.get('imatges', {}):
+            if thumbnail_url := imatges.get('url'):
                 thumbnails = [{
                     'url': thumbnail_url,
                     'width': int_or_none(imatges.get('amplada')),

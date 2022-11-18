@@ -45,26 +45,37 @@ class CanvasIE(InfoExtractor):
 
     def _real_extract(self, url):
         mobj = re.match(self._VALID_URL, url)
-        site_id, video_id = mobj.group('site_id'), mobj.group('id')
+        site_id, video_id = mobj['site_id'], mobj['id']
 
         # Old API endpoint, serves more formats but may fail for some videos
         data = self._download_json(
-            'https://mediazone.vrt.be/api/v1/%s/assets/%s'
-            % (site_id, video_id), video_id, 'Downloading asset JSON',
-            'Unable to download asset JSON', fatal=False)
+            f'https://mediazone.vrt.be/api/v1/{site_id}/assets/{video_id}',
+            video_id,
+            'Downloading asset JSON',
+            'Unable to download asset JSON',
+            fatal=False,
+        )
+
 
         # New API endpoint
         if not data:
             token = self._download_json(
-                '%s/tokens' % self._REST_API_BASE, video_id,
-                'Downloading token', data=b'',
-                headers={'Content-Type': 'application/json'})['vrtPlayerToken']
+                f'{self._REST_API_BASE}/tokens',
+                video_id,
+                'Downloading token',
+                data=b'',
+                headers={'Content-Type': 'application/json'},
+            )['vrtPlayerToken']
+
             data = self._download_json(
-                '%s/videos/%s' % (self._REST_API_BASE, video_id),
-                video_id, 'Downloading video JSON', fatal=False, query={
-                    'vrtPlayerToken': token,
-                    'client': '%s@PROD' % site_id,
-                }, expected_status=400)
+                f'{self._REST_API_BASE}/videos/{video_id}',
+                video_id,
+                'Downloading video JSON',
+                fatal=False,
+                query={'vrtPlayerToken': token, 'client': f'{site_id}@PROD'},
+                expected_status=400,
+            )
+
             message = data.get('message')
             if message and not data.get('title'):
                 if data.get('code') == 'AUTHENTICATION_REQUIRED':
@@ -179,7 +190,7 @@ class CanvasEenIE(InfoExtractor):
 
     def _real_extract(self, url):
         mobj = re.match(self._VALID_URL, url)
-        site_id, display_id = mobj.group('site_id'), mobj.group('id')
+        site_id, display_id = mobj['site_id'], mobj['id']
 
         webpage = self._download_webpage(url, display_id)
 
@@ -194,7 +205,7 @@ class CanvasEenIE(InfoExtractor):
 
         return {
             '_type': 'url_transparent',
-            'url': 'https://mediazone.vrt.be/api/v1/%s/assets/%s' % (site_id, video_id),
+            'url': f'https://mediazone.vrt.be/api/v1/{site_id}/assets/{video_id}',
             'ie_key': CanvasIE.ie_key(),
             'id': video_id,
             'display_id': display_id,
@@ -288,12 +299,14 @@ class VrtNUIE(GigyaBaseIE):
                         'email': auth_info['profile']['email'],
                     }).encode('utf-8'))
             except ExtractorError as e:
-                if isinstance(e.cause, compat_HTTPError) and e.cause.code == 401:
-                    login_attempt += 1
-                    self.report_warning('Authentication failed')
-                    self._sleep(1, None, msg_template='Waiting for %(timeout)s seconds before trying again')
-                else:
+                if (
+                    not isinstance(e.cause, compat_HTTPError)
+                    or e.cause.code != 401
+                ):
                     raise e
+                login_attempt += 1
+                self.report_warning('Authentication failed')
+                self._sleep(1, None, msg_template='Waiting for %(timeout)s seconds before trying again')
             else:
                 break
 
@@ -335,7 +348,7 @@ class VrtNUIE(GigyaBaseIE):
 
         # If there's a ? or a # in the URL, remove them and everything after
         clean_url = urlh.geturl().split('?')[0].split('#')[0].strip('/')
-        securevideo_url = clean_url + '.mssecurevideo.json'
+        securevideo_url = f'{clean_url}.mssecurevideo.json'
 
         try:
             video = self._download_json(securevideo_url, display_id)
@@ -344,25 +357,26 @@ class VrtNUIE(GigyaBaseIE):
                 self.raise_login_required()
             raise
 
-        # We are dealing with a '../<show>.relevant' URL
-        redirect_url = video.get('url')
-        if redirect_url:
+        if redirect_url := video.get('url'):
             return self.url_result(self._proto_relative_url(redirect_url, 'https:'))
 
         # There is only one entry, but with an unknown key, so just get
         # the first one
         video_id = list(video.values())[0].get('videoid')
 
-        return merge_dicts(info, {
-            '_type': 'url_transparent',
-            'url': 'https://mediazone.vrt.be/api/v1/vrtvideo/assets/%s' % video_id,
-            'ie_key': CanvasIE.ie_key(),
-            'id': video_id,
-            'display_id': display_id,
-            'title': title,
-            'description': description,
-            'season': season,
-            'season_number': season_number,
-            'episode_number': episode_number,
-            'release_date': release_date,
-        })
+        return merge_dicts(
+            info,
+            {
+                '_type': 'url_transparent',
+                'url': f'https://mediazone.vrt.be/api/v1/vrtvideo/assets/{video_id}',
+                'ie_key': CanvasIE.ie_key(),
+                'id': video_id,
+                'display_id': display_id,
+                'title': title,
+                'description': description,
+                'season': season,
+                'season_number': season_number,
+                'episode_number': episode_number,
+                'release_date': release_date,
+            },
+        )

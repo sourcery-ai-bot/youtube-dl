@@ -35,4 +35,4 @@ class CBSSportsIE(CBSBaseIE):
         video_id = self._search_regex(
             [r'(?:=|%26)pcid%3D(\d+)', r'embedVideo(?:Container)?_(\d+)'],
             webpage, 'video id')
-        return self._extract_video_info('byId=%s' % video_id, video_id)
+        return self._extract_video_info(f'byId={video_id}', video_id)

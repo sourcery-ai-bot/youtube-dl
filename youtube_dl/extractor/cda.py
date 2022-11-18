@@ -84,7 +84,9 @@ class CDAIE(InfoExtractor):
         video_id = self._match_id(url)
         self._set_cookie('cda.pl', 'cda.player', 'html5')
         webpage = self._download_webpage(
-            self._BASE_URL + '/video/' + video_id, video_id)
+            f'{self._BASE_URL}/video/{video_id}', video_id
+        )
+
 
         if 'Ten film jest dostępny dla użytkowników premium' in webpage:
             raise ExtractorError('This video is only available for premium users.', expected=True)
@@ -125,17 +127,21 @@ class CDAIE(InfoExtractor):
 
         def extract_format(page, version):
             json_str = self._html_search_regex(
-                r'player_data=(\\?["\'])(?P<player_data>.+?)\1', page,
-                '%s player_json' % version, fatal=False, group='player_data')
+                r'player_data=(\\?["\'])(?P<player_data>.+?)\1',
+                page,
+                f'{version} player_json',
+                fatal=False,
+                group='player_data',
+            )
+
             if not json_str:
                 return
-            player_data = self._parse_json(
-                json_str, '%s player_data' % version, fatal=False)
+            player_data = self._parse_json(json_str, f'{version} player_data', fatal=False)
             if not player_data:
                 return
             video = player_data.get('video')
             if not video or 'file' not in video:
-                self.report_warning('Unable to extract %s version information' % version)
+                self.report_warning(f'Unable to extract {version} version information')
                 return
             if video['file'].startswith('uggc'):
                 video['file'] = codecs.decode(video['file'], 'rot_13')
@@ -148,10 +154,7 @@ class CDAIE(InfoExtractor):
                 r'<a[^>]+data-quality="(?P<format_id>[^"]+)"[^>]+href="[^"]+"[^>]+class="[^"]*quality-btn-active[^"]*">(?P<height>[0-9]+)p',
                 page)
             if m:
-                f.update({
-                    'format_id': m.group('format_id'),
-                    'height': int(m.group('height')),
-                })
+                f.update({'format_id': m['format_id'], 'height': int(m['height'])})
             info_dict['formats'].append(f)
             if not info_dict['duration']:
                 info_dict['duration'] = parse_duration(video.get('duration'))
@@ -167,12 +170,16 @@ class CDAIE(InfoExtractor):
                 handler = self._download_webpage
 
             webpage = handler(
-                self._BASE_URL + href, video_id,
-                'Downloading %s version information' % resolution, fatal=False)
+                self._BASE_URL + href,
+                video_id,
+                f'Downloading {resolution} version information',
+                fatal=False,
+            )
+
             if not webpage:
                 # Manually report warning because empty page is returned when
                 # invalid version is requested.
-                self.report_warning('Unable to download %s version information' % resolution)
+                self.report_warning(f'Unable to download {resolution} version information')
                 continue
 
             extract_format(webpage, resolution)

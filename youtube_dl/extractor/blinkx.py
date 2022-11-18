@@ -32,8 +32,10 @@ class BlinkxIE(InfoExtractor):
         video_id = self._match_id(url)
         display_id = video_id[:8]
 
-        api_url = ('https://apib4.blinkx.com/api.php?action=play_video&'
-                   + 'video=%s' % video_id)
+        api_url = (
+            f'https://apib4.blinkx.com/api.php?action=play_video&video={video_id}'
+        )
+
         data_json = self._download_webpage(api_url, display_id)
         data = json.loads(data_json)['api']['results'][0]
         duration = None
@@ -50,7 +52,7 @@ class BlinkxIE(InfoExtractor):
                 duration = float(m['d'])
             elif m['type'] == 'youtube':
                 yt_id = m['link']
-                self.to_screen('Youtube video detected: %s' % yt_id)
+                self.to_screen(f'Youtube video detected: {yt_id}')
                 return self.url_result(yt_id, 'Youtube', video_id=yt_id)
             elif m['type'] in ('flv', 'mp4'):
                 vcodec = remove_start(m['vcodec'], 'ff')
@@ -58,7 +60,7 @@ class BlinkxIE(InfoExtractor):
                 vbr = int_or_none(m.get('vbr') or m.get('vbitrate'), 1000)
                 abr = int_or_none(m.get('abr') or m.get('abitrate'), 1000)
                 tbr = vbr + abr if vbr and abr else None
-                format_id = '%s-%sk-%s' % (vcodec, tbr, m['w'])
+                format_id = f"{vcodec}-{tbr}k-{m['w']}"
                 formats.append({
                     'format_id': format_id,
                     'url': m['link'],

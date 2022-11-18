@@ -74,17 +74,18 @@ class CeskaTelevizeIE(InfoExtractor):
         webpage = self._download_webpage(url, playlist_id)
 
         NOT_AVAILABLE_STRING = 'This content is not available at your territory due to limited copyright.'
-        if '%s</p>' % NOT_AVAILABLE_STRING in webpage:
+        if f'{NOT_AVAILABLE_STRING}</p>' in webpage:
             raise ExtractorError(NOT_AVAILABLE_STRING, expected=True)
 
         type_ = None
         episode_id = None
 
-        playlist = self._parse_json(
+        if playlist := self._parse_json(
             self._search_regex(
-                r'getPlaylistUrl\(\[({.+?})\]', webpage, 'playlist',
-                default='{}'), playlist_id)
-        if playlist:
+                r'getPlaylistUrl\(\[({.+?})\]', webpage, 'playlist', default='{}'
+            ),
+            playlist_id,
+        ):
             type_ = playlist.get('type')
             episode_id = playlist.get('id')
 
@@ -151,12 +152,22 @@ class CeskaTelevizeIE(InfoExtractor):
                         continue
                     if 'playerType=flash' in stream_url:
                         stream_formats = self._extract_m3u8_formats(
-                            stream_url, playlist_id, 'mp4', 'm3u8_native',
-                            m3u8_id='hls-%s' % format_id, fatal=False)
+                            stream_url,
+                            playlist_id,
+                            'mp4',
+                            'm3u8_native',
+                            m3u8_id=f'hls-{format_id}',
+                            fatal=False,
+                        )
+
                     else:
                         stream_formats = self._extract_mpd_formats(
-                            stream_url, playlist_id,
-                            mpd_id='dash-%s' % format_id, fatal=False)
+                            stream_url,
+                            playlist_id,
+                            mpd_id=f'dash-{format_id}',
+                            fatal=False,
+                        )
+
                     # See https://github.com/ytdl-org/youtube-dl/issues/12119#issuecomment-280037031
                     if format_id == 'audioDescription':
                         for f in stream_formats:
@@ -175,8 +186,7 @@ class CeskaTelevizeIE(InfoExtractor):
 
                 subtitles = {}
                 if item.get('type') == 'VOD':
-                    subs = item.get('subtitles')
-                    if subs:
+                    if subs := item.get('subtitles'):
                         subtitles = self.extract_subtitles(episode_id, subs)
 
                 if playlist_len == 1:
@@ -184,7 +194,7 @@ class CeskaTelevizeIE(InfoExtractor):
                     if is_live:
                         final_title = self._live_title(final_title)
                 else:
-                    final_title = '%s (%s)' % (playlist_title, title)
+                    final_title = f'{playlist_title} ({title})'
 
                 entries.append({
                     'id': item_id,
@@ -229,7 +239,7 @@ class CeskaTelevizeIE(InfoExtractor):
             for line in subtitle.splitlines():
                 m = re.match(r'^\s*([0-9]+);\s*([0-9]+)\s+([0-9]+)\s*$', line)
                 if m:
-                    yield m.group(1)
+                    yield m[1]
                     start, stop = (_msectotimecode(int(t)) for t in m.groups()[1:])
                     yield '{0} --> {1}'.format(start, stop)
                 else:

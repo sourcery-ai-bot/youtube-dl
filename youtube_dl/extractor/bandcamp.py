@@ -81,7 +81,7 @@ class BandcampIE(InfoExtractor):
 
     def _real_extract(self, url):
         mobj = re.match(self._VALID_URL, url)
-        title = mobj.group('title')
+        title = mobj['title']
         webpage = self._download_webpage(url, title)
         thumbnail = self._html_search_meta('og:image', webpage, default=None)
 
@@ -176,9 +176,15 @@ class BandcampIE(InfoExtractor):
                             })
                         format_id = f.get('encoding_name') or format_id
                         stat = self._download_json(
-                            stat_url, track_id, 'Downloading %s JSON' % format_id,
-                            transform_source=lambda s: s[s.index('{'):s.rindex('}') + 1],
-                            fatal=False)
+                            stat_url,
+                            track_id,
+                            f'Downloading {format_id} JSON',
+                            transform_source=lambda s: s[
+                                s.index('{') : s.rindex('}') + 1
+                            ],
+                            fatal=False,
+                        )
+
                         if not stat:
                             continue
                         retry_url = url_or_none(stat.get('retry_url'))
@@ -195,7 +201,7 @@ class BandcampIE(InfoExtractor):
 
         self._sort_formats(formats)
 
-        title = '%s - %s' % (artist, track) if artist else track
+        title = f'{artist} - {track}' if artist else track
 
         if not duration:
             duration = float_or_none(self._html_search_meta(
@@ -295,8 +301,8 @@ class BandcampAlbumIE(InfoExtractor):
 
     def _real_extract(self, url):
         mobj = re.match(self._VALID_URL, url)
-        uploader_id = mobj.group('subdomain')
-        album_id = mobj.group('album_id')
+        uploader_id = mobj['subdomain']
+        album_id = mobj['album_id']
         playlist_id = album_id or uploader_id
         webpage = self._download_webpage(url, playlist_id)
         track_elements = re.findall(
@@ -371,12 +377,15 @@ class BandcampWeeklyIE(InfoExtractor):
         for format_id, format_url in show['audio_stream'].items():
             if not url_or_none(format_url):
                 continue
-            for known_ext in KNOWN_EXTENSIONS:
-                if known_ext in format_id:
-                    ext = known_ext
-                    break
-            else:
-                ext = None
+            ext = next(
+                (
+                    known_ext
+                    for known_ext in KNOWN_EXTENSIONS
+                    if known_ext in format_id
+                ),
+                None,
+            )
+
             formats.append({
                 'format_id': format_id,
                 'url': format_url,
@@ -386,9 +395,8 @@ class BandcampWeeklyIE(InfoExtractor):
         self._sort_formats(formats)
 
         title = show.get('audio_title') or 'Bandcamp Weekly'
-        subtitle = show.get('subtitle')
-        if subtitle:
-            title += ' - %s' % subtitle
+        if subtitle := show.get('subtitle'):
+            title += f' - {subtitle}'
 
         episode_number = None
         seq = blob.get('bcw_seq')

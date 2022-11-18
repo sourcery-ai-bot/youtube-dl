@@ -30,7 +30,7 @@ class ArteTVBaseIE(InfoExtractor):
                 error = try_get(
                     player_info, lambda x: x['custom_msg']['msg'], compat_str)
             if not error:
-                error = 'Video %s is not available' % player_info.get('VID') or video_id
+                error = f"Video {player_info.get('VID')} is not available" or video_id
             raise ExtractorError(error, expected=True)
 
         upload_date_str = player_info.get('shootingDate')
@@ -38,9 +38,8 @@ class ArteTVBaseIE(InfoExtractor):
             upload_date_str = (player_info.get('VRA') or player_info.get('VDA') or '').split(' ')[0]
 
         title = (player_info.get('VTI') or title or player_info['VID']).strip()
-        subtitle = player_info.get('VSU', '').strip()
-        if subtitle:
-            title += ' - %s' % subtitle
+        if subtitle := player_info.get('VSU', '').strip():
+            title += f' - {subtitle}'
 
         info_dict = {
             'id': player_info['VID'],
@@ -100,23 +99,26 @@ class ArteTVBaseIE(InfoExtractor):
                 r'VO(?:(?!{0}).+?)?-STM(?!{0}).+?$'.format(l),
             )
 
-            for pref, p in enumerate(PREFERENCES):
-                if re.match(p, versionCode):
-                    lang_pref = len(PREFERENCES) - pref
-                    break
-            else:
-                lang_pref = -1
+            lang_pref = next(
+                (
+                    len(PREFERENCES) - pref
+                    for pref, p in enumerate(PREFERENCES)
+                    if re.match(p, versionCode)
+                ),
+                -1,
+            )
 
             format = {
                 'format_id': format_id,
                 'preference': -10 if f.get('videoFormat') == 'M3U8' else None,
                 'language_preference': lang_pref,
-                'format_note': '%s, %s' % (f.get('versionCode'), f.get('versionLibelle')),
+                'format_note': f"{f.get('versionCode')}, {f.get('versionLibelle')}",
                 'width': int_or_none(f.get('width')),
                 'height': int_or_none(f.get('height')),
                 'tbr': int_or_none(f.get('bitrate')),
                 'quality': qfunc(f.get('quality')),
             }
+
 
             if f.get('mediaType') == 'rtmp':
                 format['url'] = f['streamer']
@@ -151,8 +153,10 @@ class ArteTVPlus7IE(ArteTVBaseIE):
     def _real_extract(self, url):
         lang, video_id = re.match(self._VALID_URL, url).groups()
         return self._extract_from_json_url(
-            'https://api.arte.tv/api/player/v1/config/%s/%s' % (lang, video_id),
-            video_id, lang)
+            f'https://api.arte.tv/api/player/v1/config/{lang}/{video_id}',
+            video_id,
+            lang,
+        )
 
 
 class ArteTVEmbedIE(ArteTVPlus7IE):
@@ -190,8 +194,10 @@ class ArteTVPlaylistIE(ArteTVBaseIE):
     def _real_extract(self, url):
         lang, playlist_id = re.match(self._VALID_URL, url).groups()
         collection = self._download_json(
-            'https://api.arte.tv/api/player/v1/collectionData/%s/%s?source=videos'
-            % (lang, playlist_id), playlist_id)
+            f'https://api.arte.tv/api/player/v1/collectionData/{lang}/{playlist_id}?source=videos',
+            playlist_id,
+        )
+
         title = collection.get('title')
         description = collection.get('shortDescription') or collection.get('teaserText')
         entries = [

@@ -155,9 +155,9 @@ class CCTVIE(InfoExtractor):
         video = data.get('video')
         if isinstance(video, dict):
             for quality, chapters_key in enumerate(('lowChapters', 'chapters')):
-                video_url = try_get(
-                    video, lambda x: x[chapters_key][0]['url'], compat_str)
-                if video_url:
+                if video_url := try_get(
+                    video, lambda x: x[chapters_key][0]['url'], compat_str
+                ):
                     formats.append({
                         'url': video_url,
                         'format_id': 'http',
@@ -165,8 +165,7 @@ class CCTVIE(InfoExtractor):
                         'preference': -1,
                     })
 
-        hls_url = try_get(data, lambda x: x['hls_url'], compat_str)
-        if hls_url:
+        if hls_url := try_get(data, lambda x: x['hls_url'], compat_str):
             hls_url = re.sub(r'maxbr=\d+&?', '', hls_url)
             formats.extend(self._extract_m3u8_formats(
                 hls_url, video_id, 'mp4', entry_protocol='m3u8_native',

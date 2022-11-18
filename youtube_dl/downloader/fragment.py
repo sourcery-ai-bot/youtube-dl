@@ -71,7 +71,7 @@ class FragmentFD(FileDownloader):
 
     @staticmethod
     def __do_ytdl_file(ctx):
-        return not ctx['live'] and not ctx['tmpfilename'] == '-'
+        return not ctx['live'] and ctx['tmpfilename'] != '-'
 
     def _read_ytdl_file(self, ctx):
         assert 'ytdl_corrupt' not in ctx
@@ -125,13 +125,11 @@ class FragmentFD(FileDownloader):
             ctx['live'] = False
         if not ctx['live']:
             total_frags_str = '%d' % ctx['total_frags']
-            ad_frags = ctx.get('ad_frags', 0)
-            if ad_frags:
+            if ad_frags := ctx.get('ad_frags', 0):
                 total_frags_str += ' (not including %d ad)' % ad_frags
         else:
             total_frags_str = 'unknown (live)'
-        self.to_screen(
-            '[%s] Total fragments: %s' % (self.FD_NAME, total_frags_str))
+        self.to_screen(f'[{self.FD_NAME}] Total fragments: {total_frags_str}')
         self.report_destination(ctx['filename'])
         dl = HttpQuietDownloader(
             self.ydl,
@@ -169,8 +167,7 @@ class FragmentFD(FileDownloader):
                     message = (
                         '.ytdl file is corrupt' if is_corrupt else
                         'Inconsistent state of incomplete fragment download')
-                    self.report_warning(
-                        '%s. Restarting from the beginning...' % message)
+                    self.report_warning(f'{message}. Restarting from the beginning...')
                     ctx['fragment_index'] = resume_len = 0
                     if 'ytdl_corrupt' in ctx:
                         del ctx['ytdl_corrupt']

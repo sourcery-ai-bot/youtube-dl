@@ -17,8 +17,7 @@ class CBSBaseIE(ThePlatformFeedIE):
         for k, ext in [('sMPTE-TTCCURL', 'tt'), ('ClosedCaptionURL', 'ttml'), ('webVTTCaptionURL', 'vtt')]:
             cc_e = find_xpath_attr(smil, self._xpath_ns('.//param', namespace), 'name', k)
             if cc_e is not None:
-                cc_url = cc_e.get('value')
-                if cc_url:
+                if cc_url := cc_e.get('value'):
                     subtitles.setdefault(subtitles_lang, []).append({
                         'ext': ext,
                         'url': cc_url,
@@ -61,7 +60,7 @@ class CBSIE(CBSBaseIE):
         video_data = xpath_element(items_data, './/item')
         title = xpath_text(video_data, 'videoTitle', 'title', True)
         tp_path = 'dJ5BDC/media/guid/%d/%s' % (mpx_acc, content_id)
-        tp_release_url = 'http://link.theplatform.com/s/' + tp_path
+        tp_release_url = f'http://link.theplatform.com/s/{tp_path}'
 
         asset_types = []
         subtitles = {}
@@ -82,8 +81,11 @@ class CBSIE(CBSBaseIE):
                 query['formats'] = 'MPEG4,FLV'
             try:
                 tp_formats, tp_subtitles = self._extract_theplatform_smil(
-                    update_url_query(tp_release_url, query), content_id,
-                    'Downloading %s SMIL data' % asset_type)
+                    update_url_query(tp_release_url, query),
+                    content_id,
+                    f'Downloading {asset_type} SMIL data',
+                )
+
             except ExtractorError as e:
                 last_e = e
                 continue
